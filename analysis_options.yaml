@@ -1,0 +1,33 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+analyzer:
+  errors:
+    always_use_package_imports: ignore
+    avoid_positional_boolean_parameters: ignore
+    avoid_returning_this: ignore
+    avoid_setters_without_getters: ignore
+    depend_on_referenced_packages: ignore
+    directives_ordering: ignore
+    flutter_style_todos: ignore
+    parameter_assignments: ignore
+    prefer_constructors_over_static_methods: ignore
+    prefer_int_literals: ignore
+    unnecessary_await_in_return: ignore
+    use_setters_to_change_properties: ignore
+  exclude:
+    - lib/**.graphql.dart
+    - lib/**.g.dart
+    - lib/**.migration.dart
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+
+linter:
+  rules:
+    library_prefixes: false
+    no_runtimeType_toString: false
+    one_member_abstracts: false
+    prefer_single_quotes: false
+    public_member_api_docs: false
+    unnecessary_brace_in_string_interps: false

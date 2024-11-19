@@ -1,0 +1,16 @@
+name: my_own_mvvm_with_dependency_injection_blackjack_and_hookers
+description: "My Own MVVM with Dependency Injection, Blackjack and Hookers"
+version: 0.0.1
+homepage: https://github.com/JCKodel/my_own_mvvm_with_dependency_injection_blackjack_and_hookers
+
+environment:
+  sdk: ^3.5.4
+  flutter: ">=1.17.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_lints: ^4.0.0
+  very_good_analysis: ^6.0.0

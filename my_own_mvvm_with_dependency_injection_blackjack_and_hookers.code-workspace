@@ -1,0 +1,96 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "build_runner",
+        "command": "dart",
+        "type": "process",
+        "args": [
+          "run",
+          "build_runner",
+          "watch",
+          "-d"
+        ],
+        "presentation": {
+          "reveal": "always"
+        },
+        "isBackground": false,
+        "isBuildCommand": true,
+        "group": "build"
+      }
+    ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Flutter",
+        "request": "launch",
+        "type": "dart",
+        "flutterMode": "debug",
+        "args": [
+          "--web-port",
+          "5858"
+        ]
+      }
+    ],
+  },
+  "settings": {
+    "workbench.colorCustomizations": {
+      "editorBracketHighlight.foreground1": "#fac928",
+      "editorBracketHighlight.foreground2": "#c122e9",
+      "editorBracketHighlight.foreground3": "#057aff",
+      "editorBracketHighlight.foreground4": "#00e74d",
+      "editorBracketHighlight.foreground5": "#f51384",
+      "editorBracketHighlight.foreground6": "#19f9d8",
+      "editorBracketPairGuide.background1": "#fac9289E",
+      "editorBracketPairGuide.background2": "#c122e99E",
+      "editorBracketPairGuide.background3": "#057aff9E",
+      "editorBracketPairGuide.background4": "#00e74d9E",
+      "editorBracketPairGuide.background5": "#f513849E",
+      "editorBracketPairGuide.background6": "#19f9d89E",
+      "editorBracketPairGuide.activeBackground1": "#FAC9289E",
+      "editorBracketPairGuide.activeBackground2": "#C122E99E",
+      "editorBracketPairGuide.activeBackground3": "#057AFF9E",
+      "editorBracketPairGuide.activeBackground4": "#00E7499E",
+      "editorBracketPairGuide.activeBackground5": "#F513849E",
+      "editorBracketPairGuide.activeBackground6": "#19F9D89E",
+      "activityBar.background": "#0F3239",
+      "titleBar.activeBackground": "#164650",
+      "titleBar.activeForeground": "#F4FBFC"
+    },
+    "editor.suggest.showWords": true,
+    "editor.suggest.showMethods": true,
+    "editor.suggest.showFunctions": true,
+    "editor.suggest.showConstructors": true,
+    "editor.suggest.showFields": true,
+    "editor.suggest.showVariables": true,
+    "editor.suggest.showClasses": true,
+    "editor.suggest.showInterfaces": true,
+    "editor.suggest.showModules": true,
+    "editor.suggest.showProperties": true,
+    "editor.suggest.showUnits": true,
+    "editor.suggest.showValues": true,
+    "editor.suggest.showEnums": true,
+    "editor.suggest.showKeywords": true,
+    "editor.suggest.showSnippets": true,
+    "editor.suggest.showColors": true,
+    "editor.suggest.showFiles": true,
+    "editor.suggest.showReferences": true,
+    "editor.suggest.showFolders": true,
+    "editor.suggest.showEnumMembers": true,
+    "editor.suggest.showConstants": true,
+    "editor.suggest.showStructs": true,
+    "editor.suggest.showEvents": true,
+    "editor.suggest.showOperators": true,
+    "editor.suggest.showTypeParameters": true,
+    "editor.suggest.showUsers": true,
+    "editor.suggest.showIssues": true
+  },
+}
