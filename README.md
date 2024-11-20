@@ -4,7 +4,11 @@
 
 1) Divide your classes into business logic and infrastructure (for instance: FirebaseAuth is infrastructure).
 
+DETAILS: What makes sense for me: a) *models*  are classes with business logic ONLY that don't hold state at all (they have const constructors to enforce this). Any side effect is allowed to happen only in external dependencies, which are known to the model only by contracts (an interface (`abstract interface class` in Dart). I like to call those contract implementations "providers", since they provide the details of something (like database access or authentication). ViewModels then uses models to do a job specific suited for the view that uses it, using the models (also injected). View Models are mutable, because they hold state. That makes things simpler =)
+
 2) Whenever appropriate in the widget tree, use the [DependenciesBuilder] widget to initialize the infrastructure and provide it to the widget tree:
+
+(NOTE: `DependenciesBuilder` will add a scope in the widget tree, but you don't need to do that, since a scope (`Dependencies` class) is pure Dart (i.e.: it doesn't need Flutter to work)). `DependenciesBuilder` just makes things easier.
 
 ```dart
 DependenciesBuilder(
@@ -59,6 +63,10 @@ When a [DependencyBuilder] gets out of scope, it will be disposed automatically,
 along with any dependencies that implement [IDisposable]. [ChangeNotifier.dispose] will also be called on dispose.
 
 3) Use the [ViewModelStatelessWidget] class to create a stateless widget that requires a view model:
+
+NEW BEHAVIOR: `factory` now is optional. If you inject the dependency on the constructor, like the exemple below, you need to write `factory`. But, if you get your dependencies inside the constructor of your view model or by any other means but passing it in the constructor, then we can simple use `T.new()` to create your view model, making `factory` optional in this case.
+
+ALSO: `ViewModelStatelessWidget<MainAppViewModel>` is only a helper. You don't heed to use it if you don't want. All it does is wrap your view model inside a `DependenciesBuilder` widget (so your view model is a dependency in the same way any other dependency is) and then it uses an internal stateful builder to hold that view model in the tree, initializing and disposing of it as needed. You can, if you want, construct, initialize and dispose your view model yourself and, since it is a `ChangeNotifier`, you don't need any of my code to actually use it (a simple `ValueListenableBuilder` will do the trick)
 
 ```dart
 final class MainApp extends ViewModelStatelessWidget<MainAppViewModel> {
