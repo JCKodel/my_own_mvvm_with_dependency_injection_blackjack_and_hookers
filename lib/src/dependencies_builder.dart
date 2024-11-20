@@ -74,6 +74,10 @@ final class _DependenciesBuilderState extends State<DependenciesBuilder> {
               : const SizedBox.shrink();
         }
 
+        if (snapshot.hasError) {
+          return ErrorWidget(snapshot.error!);
+        }
+
         _dependencies = snapshot.data;
 
         return Scope(
