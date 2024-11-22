@@ -45,7 +45,7 @@ final class Dependencies {
   }
 
   final List<Dependency<Object>> _dependencies;
-  final _instances = <Type, Object>{};
+  final _instances = <Type, MapEntry<Dependencies, Object>>{};
 
   /// Registers a new factory in the current scope for creating instances of
   /// type [T].
@@ -72,7 +72,13 @@ final class Dependencies {
       log("Disposing", name: "${instance.runtimeType}");
     }
 
-    for (final instance in _instances.values) {
+    for (final entry in _instances.values) {
+      if (entry.key != this) {
+        continue;
+      }
+
+      final instance = entry.value;
+
       if (instance is IDisposable) {
         writeLog(instance);
         instance.dispose();
@@ -153,7 +159,7 @@ final class Dependencies {
         await instance.initialize();
       }
 
-      _instances[dependency.type] = instance;
+      _instances[dependency.type] = MapEntry(this, instance);
     }
 
     return this;

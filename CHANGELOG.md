@@ -13,3 +13,7 @@
 ## 0.0.2
 
 * Now `DependenciesBuilder` will render an `ErrorWidget` with the exception thrown by some nasty dependency. 
+
+## 0.0.3
+
+* Bug fix from https://forum.itsallwidgets.com/t/flutter-and-idx/429/22
