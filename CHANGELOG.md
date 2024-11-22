@@ -17,3 +17,7 @@
 ## 0.0.3
 
 * Bug fix from https://forum.itsallwidgets.com/t/flutter-and-idx/429/22
+
+## 0.0.3+1
+
+* Bug fix from bug fix

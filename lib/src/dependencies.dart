@@ -177,7 +177,7 @@ final class Dependencies {
     final instance = scope._instances[T];
 
     if (instance != null) {
-      return instance as T;
+      return instance.value as T;
     }
 
     if (scopeIndex == 0) {
