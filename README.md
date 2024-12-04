@@ -62,7 +62,7 @@ Dependencies that implement [IInitializable] will be initialized automatically w
 When a [DependencyBuilder] gets out of scope, it will be disposed automatically, 
 along with any dependencies that implement [IDisposable]. [ChangeNotifier.dispose] will also be called on dispose.
 
-3) Use the [ViewModelStatelessWidget] class to create a stateless widget that requires a view model:
+3) Use the [ViewModelStatelessWidget] class to create a stateless widget that requires a view model *or*, inherit the `ViewWidget<TViewModel extends ChangeNotifier>` class in your views (this class has some neat overrides for you to use, like `initState`, `didChangeDependencies`, `dispose`, `buildWaiter`, `buildError` and `build`).
 
 TIP: You here have two choices: if you want to make your view model free of this framework, then you inject what you need in the constructor, just like the example provided. But, some people, like me, don't like that, because adding or removing dependencies have now two places to change (the constructor and the `factory` method). In that case, you can then pass the `scope` to your class and then use it to create what you need inside the class. Only one place to change it, but now your class has a dependency of this framework (the `Dependencies` class, which is the scope of dependencies that allows you to resolve them). As anything in reality, it is always a tradeoff.
 

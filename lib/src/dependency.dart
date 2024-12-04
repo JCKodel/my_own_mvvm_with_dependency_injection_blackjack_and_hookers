@@ -15,5 +15,16 @@ final class Dependency<T> {
   final List<Type> dependsOn;
 
   /// The type of the dependency.
-  Type get type => T;
+  String getTypeName() {
+    final genericTypeName = T.toString();
+
+    if (genericTypeName != "dynamic" && genericTypeName != "Object") {
+      return genericTypeName;
+    }
+
+    final closureSignature =
+        factory.toString().split(">")[1].trim().split(" ").first;
+
+    return closureSignature;
+  }
 }

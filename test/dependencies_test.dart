@@ -6,6 +6,7 @@ import 'package:my_own_mvvm_with_dependency_injection_blackjack_and_hookers/depe
 void main() {
   test("Dependencies ordered correctly", _dependenciesOrderedCorrectly);
   test("Dependencies initialization", _dependenciesInitialization);
+  test("Type inference works correctly", _typeInferenceWorksCorrectly);
 }
 
 Future<void> _dependenciesOrderedCorrectly() async {
@@ -151,4 +152,26 @@ final class DependsOnDependsOnNoDependenciesAB implements IInitializable {
   Future<void> initialize() async {
     order = ++_order;
   }
+}
+
+Future<void> _typeInferenceWorksCorrectly() async {
+  final scope = Dependencies.pushScope(
+    [
+      Dependency(
+        (scope) => "Hello ${scope.get<int>()}",
+        dependsOn: [int],
+      ),
+      Dependency(
+        (scope) => scope.get<String>().length.toDouble(),
+        dependsOn: [String],
+      ),
+      Dependency((scope) => 3),
+    ],
+  );
+
+  final initializedScope = await scope.build();
+
+  expect(initializedScope.get<String>(), "Hello 3");
+  expect(initializedScope.get<int>(), 3);
+  expect(initializedScope.get<double>(), 7);
 }

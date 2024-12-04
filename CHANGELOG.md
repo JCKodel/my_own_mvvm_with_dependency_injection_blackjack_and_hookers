@@ -35,3 +35,7 @@
 ## 1.0.0+1
 
 * My tests are perfect, but the Dart Test SDK failed (seriously: I used `test` and that has some nasty issues with version while using Flutter, so changed it to use `flutter_test` from sdk, nobody uses Dart alone anyway...)
+
+## 1.0.1
+
+* Dependencies are now registered as String, so if you miss the `T` in `Dependencies<T>`, it will still find the right type (infered from the closure signature). Notice that if your dependency is an interface, you still need to specify the generic type

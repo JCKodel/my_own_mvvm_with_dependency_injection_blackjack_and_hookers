@@ -22,17 +22,7 @@ final class Dependencies {
   static Dependencies pushScope(
     List<Dependency<dynamic>> factories,
   ) {
-    for (var ct = 0; ct < factories.length; ct++) {
-      final factory = factories[ct];
-
-      if (factory.type.toString() == "dynamic") {
-        throw StateError(
-          "pushScope requires a type argument: #${ct + 1} ${factory}",
-        );
-      }
-
-      _logger.fine("Pushing new scope with ${factories.length} dependencies");
-    }
+    _logger.fine("Pushing new scope with ${factories.length} dependencies");
 
     final scope = Dependencies._(factories);
 
@@ -59,7 +49,7 @@ final class Dependencies {
   }
 
   final List<Dependency<dynamic>> _dependencies;
-  final _instances = <Type, MapEntry<Dependencies, dynamic>>{};
+  final _instances = <String, MapEntry<Dependencies, dynamic>>{};
 
   /// Registers a new factory in the current scope for creating instances of
   /// type [T].
@@ -70,15 +60,8 @@ final class Dependencies {
   ///
   /// If the type is already registered, the factory will be replaced.
   void registerFactory<T>(T Function(Dependencies scope) factory) {
-    final typeName = T.toString();
-
-    assert(
-      typeName != "dynamic",
-      "registerFactory<T> requires a type argument",
-    );
-
-    _logger.info("Registering");
-    _dependencies.add(factory as Dependency<Object>);
+    _logger.info("Registering ${T}");
+    _dependencies.add(factory as Dependency<dynamic>);
   }
 
   /// Disposes of all dependencies in the current scope.
@@ -121,32 +104,34 @@ final class Dependencies {
   /// Throws an [StateError] if no factory is registered for the type [T] or
   /// if a cyclic dependency is detected.
   Future<Dependencies> build() async {
-    final graph = <Type, List<Type>>{};
-    final inDegrees = <Type, int>{};
+    final graph = <String, List<String>>{};
+    final inDegrees = <String, int>{};
 
     for (final dep in _dependencies) {
-      if (dep.type.toString() == "dynamic") {
-        throw StateError("registerFactory<T> requires a type argument: ${dep}");
-      }
+      final typeName = dep.getTypeName();
 
-      graph[dep.type] = [];
-      inDegrees[dep.type] = 0;
+      graph[typeName] = [];
+      inDegrees[typeName] = 0;
     }
 
     for (final dep in _dependencies) {
+      final typeName = dep.getTypeName();
+
       for (final dependency in dep.dependsOn) {
-        if (graph.containsKey(dependency) == false) {
+        final dependencyName = dependency.toString();
+
+        if (graph.containsKey(dependencyName) == false) {
           throw StateError(
-            "Dependency '$dependency' not found for '${dep.type}'.",
+            "Dependency '$dependency' not found for '${typeName}'.",
           );
         }
 
-        graph[dependency]!.add(dep.type);
-        inDegrees[dep.type] = (inDegrees[dep.type] ?? 0) + 1;
+        graph[dependencyName]!.add(typeName);
+        inDegrees[typeName] = (inDegrees[typeName] ?? 0) + 1;
       }
     }
 
-    final queue = Queue<Type>();
+    final queue = Queue<String>();
     final sorted = <Dependency<dynamic>>[];
 
     for (final entry in inDegrees.entries) {
@@ -157,7 +142,10 @@ final class Dependencies {
 
     while (queue.isNotEmpty) {
       final current = queue.removeFirst();
-      final currentDep = _dependencies.firstWhere((dep) => dep.type == current);
+
+      final currentDep = _dependencies.firstWhere(
+        (dep) => dep.getTypeName() == current,
+      );
 
       sorted.add(currentDep);
 
@@ -176,27 +164,30 @@ final class Dependencies {
 
     final preInitializers = <Future<void>>[];
     final posInitializers = <Future<void>>[];
-    final initializedDependencies = <Type>[];
+    final initializedDependencies = <String>[];
 
     for (final dependency in sorted) {
-      _logger.info("Instantiating ${dependency.type}");
+      final typeName = dependency.getTypeName();
+
+      _logger.info("Instantiating ${typeName}");
 
       final instance = dependency.factory(this);
 
       if (instance is IInitializable) {
         Future<void> initializer() async {
           await instance.initialize();
-          _logger.info("${dependency.type} initialized");
+          _logger.info("${typeName} initialized");
         }
 
         if (dependency.dependsOn.isEmpty) {
           preInitializers.add(initializer());
-          initializedDependencies.add(dependency.type);
+          initializedDependencies.add(typeName);
         } else {
           var isPos = false;
 
           for (final dependency in dependency.dependsOn) {
-            if (initializedDependencies.contains(dependency) == false) {
+            if (initializedDependencies.contains(dependency.toString()) ==
+                false) {
               isPos = true;
               break;
             }
@@ -210,7 +201,7 @@ final class Dependencies {
         }
       }
 
-      _instances[dependency.type] = MapEntry(this, instance);
+      _instances[typeName] = MapEntry(this, instance);
     }
 
     _logger.info("Initializing ${preInitializers.length} pre-dependencies");
@@ -231,7 +222,7 @@ final class Dependencies {
 
   T _get<T>(int scopeIndex) {
     final scope = _scopes[scopeIndex];
-    final instance = scope._instances[T];
+    final instance = scope._instances[T.toString()];
 
     if (instance != null) {
       return instance.value as T;
