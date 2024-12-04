@@ -31,3 +31,7 @@
 * Fix a bug when registering the same dependency twice would trigger the circular dependency error (now it will throw an exception)
 * Improved initialization (parallel initialization, when it is possible)
 * Added some tests
+
+## 1.0.0+1
+
+* My tests are perfect, but the Dart Test SDK failed (seriously: I used `test` and that has some nasty issues with version while using Flutter, so changed it to use `flutter_test` from sdk, nobody uses Dart alone anyway...)

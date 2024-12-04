@@ -1,5 +1,5 @@
+import 'package:flutter_test/flutter_test.dart';
 import 'package:logging/logging.dart';
-import 'package:test/test.dart';
 
 import 'package:my_own_mvvm_with_dependency_injection_blackjack_and_hookers/dependencies.dart';
 
