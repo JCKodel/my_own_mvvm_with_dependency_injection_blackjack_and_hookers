@@ -39,3 +39,7 @@
 ## 1.0.1
 
 * Dependencies are now registered as String, so if you miss the `T` in `Dependencies<T>`, it will still find the right type (infered from the closure signature). Notice that if your dependency is an interface, you still need to specify the generic type
+
+## 1.0.1+1
+
+* Fix a bug in the parallel initialization

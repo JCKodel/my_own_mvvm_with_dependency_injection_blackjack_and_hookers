@@ -177,11 +177,11 @@ final class Dependencies {
         Future<void> initializer() async {
           await instance.initialize();
           _logger.info("${typeName} initialized");
+          initializedDependencies.add(typeName);
         }
 
         if (dependency.dependsOn.isEmpty) {
           preInitializers.add(initializer());
-          initializedDependencies.add(typeName);
         } else {
           var isPos = false;
 
