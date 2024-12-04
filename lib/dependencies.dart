@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'dart:collection';
-import 'dart:developer';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+
+import 'package:logging/logging.dart';
 
 part 'src/dependencies.dart';
 part 'src/dependencies_builder.dart';

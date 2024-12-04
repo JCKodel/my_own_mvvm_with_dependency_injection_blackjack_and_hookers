@@ -9,6 +9,7 @@ final class Dependencies {
   Dependencies._(this._dependencies);
 
   static final _scopes = <Dependencies>[];
+  static final _logger = Logger("Dependencies");
 
   /// Pushes a new dependency scope to the stack and initializes it with
   /// the provided factories.
@@ -19,8 +20,20 @@ final class Dependencies {
   /// scope.
 
   static Dependencies pushScope(
-    List<Dependency<Object>> factories,
+    List<Dependency<dynamic>> factories,
   ) {
+    for (var ct = 0; ct < factories.length; ct++) {
+      final factory = factories[ct];
+
+      if (factory.type.toString() == "dynamic") {
+        throw StateError(
+          "pushScope requires a type argument: #${ct + 1} ${factory}",
+        );
+      }
+
+      _logger.fine("Pushing new scope with ${factories.length} dependencies");
+    }
+
     final scope = Dependencies._(factories);
 
     _scopes.add(scope);
@@ -41,11 +54,12 @@ final class Dependencies {
       throw StateError("There is no scope to pop");
     }
 
+    _logger.fine("Popping scope");
     _scopes.removeLast().dispose();
   }
 
-  final List<Dependency<Object>> _dependencies;
-  final _instances = <Type, MapEntry<Dependencies, Object>>{};
+  final List<Dependency<dynamic>> _dependencies;
+  final _instances = <Type, MapEntry<Dependencies, dynamic>>{};
 
   /// Registers a new factory in the current scope for creating instances of
   /// type [T].
@@ -56,7 +70,14 @@ final class Dependencies {
   ///
   /// If the type is already registered, the factory will be replaced.
   void registerFactory<T>(T Function(Dependencies scope) factory) {
-    log("Registering", name: "${T}");
+    final typeName = T.toString();
+
+    assert(
+      typeName != "dynamic",
+      "registerFactory<T> requires a type argument",
+    );
+
+    _logger.info("Registering");
     _dependencies.add(factory as Dependency<Object>);
   }
 
@@ -69,7 +90,7 @@ final class Dependencies {
   /// as well.
   void dispose() {
     void writeLog(Object instance) {
-      log("Disposing", name: "${instance.runtimeType}");
+      _logger.info("Disposing ${instance.runtimeType}");
     }
 
     for (final entry in _instances.values) {
@@ -104,6 +125,10 @@ final class Dependencies {
     final inDegrees = <Type, int>{};
 
     for (final dep in _dependencies) {
+      if (dep.type.toString() == "dynamic") {
+        throw StateError("registerFactory<T> requires a type argument: ${dep}");
+      }
+
       graph[dep.type] = [];
       inDegrees[dep.type] = 0;
     }
@@ -122,7 +147,7 @@ final class Dependencies {
     }
 
     final queue = Queue<Type>();
-    final sorted = <Dependency<Object>>[];
+    final sorted = <Dependency<dynamic>>[];
 
     for (final entry in inDegrees.entries) {
       if (entry.value == 0) {
@@ -149,18 +174,50 @@ final class Dependencies {
       throw StateError("Cyclic dependency detected!");
     }
 
+    final preInitializers = <Future<void>>[];
+    final posInitializers = <Future<void>>[];
+    final initializedDependencies = <Type>[];
+
     for (final dependency in sorted) {
-      log("Instantiating", name: "${dependency.type}");
+      _logger.info("Instantiating ${dependency.type}");
 
       final instance = dependency.factory(this);
 
       if (instance is IInitializable) {
-        log("Initializing", name: "${dependency.type}");
-        await instance.initialize();
+        Future<void> initializer() async {
+          await instance.initialize();
+          _logger.info("${dependency.type} initialized");
+        }
+
+        if (dependency.dependsOn.isEmpty) {
+          preInitializers.add(initializer());
+          initializedDependencies.add(dependency.type);
+        } else {
+          var isPos = false;
+
+          for (final dependency in dependency.dependsOn) {
+            if (initializedDependencies.contains(dependency) == false) {
+              isPos = true;
+              break;
+            }
+          }
+
+          if (isPos) {
+            posInitializers.add(initializer());
+          } else {
+            preInitializers.add(initializer());
+          }
+        }
       }
 
       _instances[dependency.type] = MapEntry(this, instance);
     }
+
+    _logger.info("Initializing ${preInitializers.length} pre-dependencies");
+    await Future.wait(preInitializers);
+
+    _logger.info("Initializing ${posInitializers.length} pos-dependencies");
+    await Future.wait(posInitializers);
 
     return this;
   }
