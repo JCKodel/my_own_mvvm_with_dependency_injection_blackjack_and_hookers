@@ -45,7 +45,7 @@ final class _ViewWidgetState<TViewModel extends ChangeNotifier>
     extends State<ViewWidget<TViewModel>> {
   final _logger = Logger("${TViewModel}");
   late final TViewModel _viewModel;
-  late final Future<void>? _initializer;
+  Future<void>? _initializer;
 
   @override
   void initState() {
