@@ -316,9 +316,14 @@ final class _ViewWidgetState<TViewModel extends ChangeNotifier>
 
   @override
   Widget build(BuildContext context) {
-    final viewModelWidget = ViewModel<TViewModel>(
-      viewModel: _viewModel,
-      child: widget.build(context, _viewModel),
+    final viewModelWidget = ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) => ViewModel<TViewModel>(
+        viewModel: _viewModel,
+        child: Builder(
+          builder: (context) => widget.build(context, _viewModel),
+        ),
+      ),
     );
 
     if (_initializer == null) {

@@ -71,3 +71,7 @@
 
 * Minor fixes
 * Docs update
+
+# 1.1.0 + 3
+
+* ViewWidget was not triggering rebuilds when the view model was changed
