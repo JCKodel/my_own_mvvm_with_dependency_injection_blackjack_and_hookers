@@ -43,3 +43,7 @@
 ## 1.0.1+1
 
 * Fix a bug in the parallel initialization
+
+## 1.0.1+2
+
+* Fix a bug in the parallel initialization, again

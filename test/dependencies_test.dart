@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logging/logging.dart';
 
@@ -34,123 +36,140 @@ Future<void> _dependenciesOrderedCorrectly() async {
 Future<void> _dependenciesInitialization() async {
   final log = <String>[];
 
+  Logger.root.level = Level.ALL;
+
   Logger.root.onRecord.listen((record) {
     log.add(record.message);
   });
 
-  final scope = await Dependencies.pushScope(
+  await Dependencies.pushScope(
     [
-      Dependency<DependsOnNoDependenciesB>(
-        (scope) => DependsOnNoDependenciesB(
-          scope.get<NoDependenciesA>(),
-          scope.get<NoDependenciesB>(),
+      Dependency(
+        (scope) => FirebaseApp(),
+      ),
+      Dependency(
+        (scope) => FirebaseAnalytics(
+          scope.get<FirebaseApp>(),
         ),
-        dependsOn: [NoDependenciesA, NoDependenciesB],
+        dependsOn: [FirebaseApp],
       ),
-      Dependency<DependsOnDependsOnNoDependenciesAB>(
-        (scope) => DependsOnDependsOnNoDependenciesAB(
-          scope.get<DependsOnNoDependenciesA>(),
-          scope.get<DependsOnNoDependenciesB>(),
+      Dependency(
+        (scope) => FirebaseAuth(
+          scope.get<FirebaseApp>(),
+          scope.get<FirebaseAnalytics>(),
         ),
-        dependsOn: [DependsOnNoDependenciesA, DependsOnNoDependenciesB],
+        dependsOn: [FirebaseApp, FirebaseAnalytics],
       ),
-      Dependency<DependsOnNoDependenciesA>(
-        (scope) => DependsOnNoDependenciesA(scope.get<NoDependenciesA>()),
-        dependsOn: [NoDependenciesA],
+      Dependency(
+        (scope) => NoDependencies(),
       ),
-      Dependency<NoDependenciesB>(
-        (scope) => NoDependenciesB(),
-      ),
-      Dependency<NoDependenciesA>(
-        (scope) => NoDependenciesA(),
+      Dependency(
+        (scope) => DependOnAnalytics(
+          scope.get<FirebaseAnalytics>(),
+        ),
+        dependsOn: [FirebaseAnalytics],
       ),
     ],
   ).build();
 
-  expect(scope.get<DependsOnNoDependenciesA>().order, 4);
-  expect(scope.get<DependsOnNoDependenciesB>().order, 3);
-  expect(scope.get<DependsOnDependsOnNoDependenciesAB>().order, 5);
   expect(
     log,
     <String>[
-      'Instantiating NoDependenciesB',
-      'Instantiating NoDependenciesA',
-      'Instantiating DependsOnNoDependenciesB',
-      'Instantiating DependsOnNoDependenciesA',
-      'Instantiating DependsOnDependsOnNoDependenciesAB',
-      'Initializing 2 pre-dependencies',
-      'NoDependenciesB initialized',
-      'NoDependenciesA initialized',
-      'Initializing 3 pos-dependencies',
-      'DependsOnNoDependenciesB initialized',
-      'DependsOnNoDependenciesA initialized',
-      'DependsOnDependsOnNoDependenciesAB initialized',
+      'Pushing new scope with 5 dependencies',
+      'Instantiating FirebaseApp',
+      'Instantiating NoDependencies',
+      'Instantiating FirebaseAnalytics',
+      'Instantiating FirebaseAuth',
+      'Instantiating DependOnAnalytics',
+      'Initializing FirebaseApp, NoDependencies',
+      'Initializing FirebaseAnalytics',
+      'Initializing FirebaseAnalytics',
+      'FirebaseAnalytics initialized',
+      'FirebaseAuth initialized',
+      'DependOnAnalytics initialized',
     ],
   );
 }
 
-int _order = 0;
+abstract base class BaseInitializable implements IInitializable {
+  BaseInitializable();
 
-final class NoDependenciesA implements IInitializable {
-  NoDependenciesA();
-
-  @override
-  Future<void> initialize() async {
-    order = ++_order;
-  }
-
-  int order = 0;
-}
-
-final class NoDependenciesB implements IInitializable {
-  NoDependenciesB();
+  bool _isInitialized = false;
+  bool get isInitialized => _isInitialized;
 
   @override
   Future<void> initialize() async {
-    order = ++_order;
-  }
+    await Future<void>.delayed(
+      Duration(milliseconds: Random().nextInt(50)),
+    );
 
-  int order = 0;
-}
-
-final class DependsOnNoDependenciesA implements IInitializable {
-  DependsOnNoDependenciesA(this.noDependenciesA);
-
-  final NoDependenciesA noDependenciesA;
-  int order = 0;
-
-  @override
-  Future<void> initialize() async {
-    order = ++_order;
+    _isInitialized = true;
   }
 }
 
-final class DependsOnNoDependenciesB implements IInitializable {
-  DependsOnNoDependenciesB(this.noDependenciesA, this.noDependenciesB);
+final class FirebaseApp extends BaseInitializable {
+  FirebaseApp();
+}
 
-  final NoDependenciesA noDependenciesA;
-  final NoDependenciesB noDependenciesB;
-  int order = 0;
+final class FirebaseAnalytics extends BaseInitializable {
+  FirebaseAnalytics(this.firebaseApp);
+
+  final FirebaseApp firebaseApp;
 
   @override
   Future<void> initialize() async {
-    order = ++_order;
+    if (firebaseApp.isInitialized == false) {
+      throw StateError(
+        "FirebaseApp must be initialized before FirebaseAnalytics",
+      );
+    }
+
+    await super.initialize();
   }
 }
 
-final class DependsOnDependsOnNoDependenciesAB implements IInitializable {
-  DependsOnDependsOnNoDependenciesAB(
-    this.dependsOnNoDependenciesA,
-    this.dependsOnNoDependenciesB,
-  );
+final class FirebaseAuth extends BaseInitializable {
+  FirebaseAuth(this.firebaseApp, this.firebaseAnalytics);
 
-  final DependsOnNoDependenciesA dependsOnNoDependenciesA;
-  final DependsOnNoDependenciesB dependsOnNoDependenciesB;
-  int order = 0;
+  final FirebaseApp firebaseApp;
+  final FirebaseAnalytics firebaseAnalytics;
 
   @override
   Future<void> initialize() async {
-    order = ++_order;
+    if (firebaseApp.isInitialized == false) {
+      throw StateError(
+        "FirebaseApp must be initialized before FirebaseAuth",
+      );
+    }
+
+    if (firebaseAnalytics.isInitialized == false) {
+      throw StateError(
+        "FirebaseAnalytics must be initialized before FirebaseAuth",
+      );
+    }
+
+    await super.initialize();
+  }
+}
+
+final class NoDependencies extends BaseInitializable {
+  NoDependencies();
+}
+
+final class DependOnAnalytics extends BaseInitializable {
+  DependOnAnalytics(this.firebaseAnalytics);
+
+  final FirebaseAnalytics firebaseAnalytics;
+
+  @override
+  Future<void> initialize() async {
+    if (firebaseAnalytics.isInitialized == false) {
+      throw StateError(
+        "FirebaseAnalytics must be initialized before DependOnAnalytics",
+      );
+    }
+
+    await super.initialize();
   }
 }
 

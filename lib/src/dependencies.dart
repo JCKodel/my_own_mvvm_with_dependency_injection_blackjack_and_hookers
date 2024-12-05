@@ -162,10 +162,6 @@ final class Dependencies {
       throw StateError("Cyclic dependency detected!");
     }
 
-    final preInitializers = <Future<void>>[];
-    final posInitializers = <Future<void>>[];
-    final initializedDependencies = <String>[];
-
     for (final dependency in sorted) {
       final typeName = dependency.getTypeName();
 
@@ -173,42 +169,81 @@ final class Dependencies {
 
       final instance = dependency.factory(this);
 
-      if (instance is IInitializable) {
-        Future<void> initializer() async {
-          await instance.initialize();
-          _logger.info("${typeName} initialized");
-          initializedDependencies.add(typeName);
-        }
-
-        if (dependency.dependsOn.isEmpty) {
-          preInitializers.add(initializer());
-        } else {
-          var isPos = false;
-
-          for (final dependency in dependency.dependsOn) {
-            if (initializedDependencies.contains(dependency.toString()) ==
-                false) {
-              isPos = true;
-              break;
-            }
-          }
-
-          if (isPos) {
-            posInitializers.add(initializer());
-          } else {
-            preInitializers.add(initializer());
-          }
-        }
-      }
-
       _instances[typeName] = MapEntry(this, instance);
     }
 
-    _logger.info("Initializing ${preInitializers.length} pre-dependencies");
-    await Future.wait(preInitializers);
+    final completers = {
+      for (final dep in sorted) dep.getTypeName(): Completer<void>(),
+    };
 
-    _logger.info("Initializing ${posInitializers.length} pos-dependencies");
-    await Future.wait(posInitializers);
+    final noDeps = <Future<void>>[];
+    final noDepsNames = <String>[];
+
+    for (final dep in sorted) {
+      if (dep.dependsOn.isEmpty) {
+        final typeName = dep.getTypeName();
+        final instance = _instances[typeName]!.value;
+
+        if (instance is IInitializable) {
+          noDepsNames.add(typeName);
+          noDeps.add(instance.initialize());
+          completers[typeName]!.complete();
+        }
+      }
+    }
+
+    if (noDeps.isNotEmpty) {
+      _logger.fine("Initializing ${noDepsNames.join(", ")}");
+      await Future.wait(noDeps);
+    }
+
+    Future<void> initializeDependency(String typeName) async {
+      if (completers[typeName]!.isCompleted) {
+        return;
+      }
+
+      final instance = _instances[typeName]!.value;
+
+      if (instance is IInitializable) {
+        final dependency = sorted.firstWhere(
+          (dep) => dep.getTypeName() == typeName,
+        );
+
+        final dependenciesCompleters = dependency.dependsOn
+            .map((d) => completers[d.toString()]!)
+            .where((c) => c.isCompleted == false)
+            .map((c) => c.future);
+
+        final dependenciesNames = dependency.dependsOn
+            .map(
+              (d) => MapEntry<Type, Completer<void>>(
+                d,
+                completers[d.toString()]!,
+              ),
+            )
+            .where((c) => c.value.isCompleted == false)
+            .map((c) => c.key)
+            .toList();
+
+        if (dependenciesCompleters.isNotEmpty) {
+          _logger.fine("Initializing ${dependenciesNames.join(", ")}");
+          await Future.wait(dependenciesCompleters);
+        }
+
+        await instance.initialize();
+        _logger.info("${typeName} initialized");
+      }
+
+      completers[typeName]!.complete();
+    }
+
+    final initializers = sorted
+        .map(
+          (dep) => initializeDependency(dep.getTypeName()),
+        )
+        .toList();
+
+    await Future.wait(initializers);
 
     return this;
   }
