@@ -50,3 +50,7 @@
 ## 1.0.2
 
 * Simplified `ViewWidget`
+
+## 1.0.2+1
+
+* Fix ViewWidget  initialization

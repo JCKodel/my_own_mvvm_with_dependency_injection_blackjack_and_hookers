@@ -1,6 +1,6 @@
 name: my_own_mvvm_with_dependency_injection_blackjack_and_hookers
 description: "My Own MVVM with Dependency Injection, Blackjack and Hookers"
-version: 1.0.2
+version: 1.0.2+1
 homepage: https://github.com/JCKodel/my_own_mvvm_with_dependency_injection_blackjack_and_hookers
 
 environment:
