@@ -31,6 +31,7 @@ The ViewModel acts as a **pure business logic coordinator** that:
 **What goes in the ViewModel?**
 - You should be able to create and test the ViewModel in Dart alone, without any Flutter classes, widgets or contexts.
 - It has a `BuildContext`, some Flutter class, such as Material, Widget, Cupertino, etc.? It goes in the View.
+- You can build a class with business logic that is used by multiple view models, if you have such shared logic (think of `signOut` for example: it can be used by multiple view models). Let's call those classes `Service`. In this case, the golden rule is:  Services have `const` constructors (so they cannot have any state in it). ViewModels are always non-const (because they inherit `ChangeNotifier`).
 
 ## Dependency Injection: Decoupling Your Application
 
