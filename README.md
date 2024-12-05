@@ -28,6 +28,10 @@ The ViewModel acts as a **pure business logic coordinator** that:
 - Depends on abstractions, not concrete implementations
 - Maintains a clean separation between business logic and data sources
 
+**What goes in the ViewModel?**
+- You should be able to create and test the ViewModel in Dart alone, without any Flutter classes, widgets or contexts.
+- It has a `BuildContext`, some Flutter class, such as Material, Widget, Cupertino, etc.? It goes in the View.
+
 ## Dependency Injection: Decoupling Your Application
 
 **Dependencies** are external services your application requires:
