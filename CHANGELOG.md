@@ -62,3 +62,7 @@
 ## 1.1.0
 
 * Changed some names and adding some documentation
+
+# 1.1.0+1
+
+* Minor fixes

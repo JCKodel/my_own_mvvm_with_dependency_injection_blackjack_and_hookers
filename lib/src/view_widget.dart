@@ -27,7 +27,10 @@ abstract base class ViewWidget<TViewModel extends ChangeNotifier>
   TViewModel viewModelFactory(Dependencies scope);
 
   /// Performs initial setup before the first frame is rendered. If the
-  /// ViewModel is `IInitializable`, it will NOT be initialized at this point.
+  /// ViewModel is [IInitializable], this method will be triggered only
+  /// AFTER the [IInitializable.initialize()] method is called (and it is
+  /// async, so, in the  [buildWaiter] method, the view model is NOT yet
+  /// initialized!).
   ///
   /// This method is called during the widget's `initState()` lifecycle stage,
   /// before the first frame is drawn. Use this method for early initialization
@@ -41,7 +44,7 @@ abstract base class ViewWidget<TViewModel extends ChangeNotifier>
   /// Note: Avoid complex or time-consuming operations in this method to
   /// prevent delaying the first frame rendering.
   @protected
-  void initializeEarlyState(BuildContext context) {}
+  void initState(BuildContext context, TViewModel viewModel) {}
 
   /// Performs initialization after the first frame is rendered. If the
   /// ViewModel is `IInitializable`, it will be initialized at this point.
@@ -60,7 +63,7 @@ abstract base class ViewWidget<TViewModel extends ChangeNotifier>
   /// Warning: This method runs after the initial render, so any changes
   /// made here will trigger a potential rebuild.
   @protected
-  void initializeAfterFirstFrame(BuildContext context) {}
+  void initializeAfterFirstFrame(BuildContext context, TViewModel viewModel) {}
 
   /// Called when a dependency of this [State] object changes.
   ///
@@ -68,7 +71,7 @@ abstract base class ViewWidget<TViewModel extends ChangeNotifier>
   /// [InheritedWidget] that later changed, the framework would call this
   /// method to notify this object about the change.
   ///
-  /// This method is also called immediately after [initializeEarlyState]. It
+  /// This method is also called immediately after [initState]. It
   /// is safe to call [BuildContext.dependOnInheritedWidgetOfExactType] from
   /// this method.
   ///
@@ -78,9 +81,11 @@ abstract base class ViewWidget<TViewModel extends ChangeNotifier>
   /// fetches) when their dependencies change, and that work would be too
   /// expensive to do for every build.
   @protected
-  void didChangeDependencies(BuildContext context) {}
+  void didChangeDependencies(BuildContext context, TViewModel viewModel) {}
 
   /// Called when this object is removed from the tree permanently.
+  ///
+  /// NOTE: YOU DO NOT NEED TO DISPOSE VIEWMODEL HERE!
   ///
   /// The framework calls this method when this [State] object will never
   /// build again.
@@ -120,9 +125,15 @@ abstract base class ViewWidget<TViewModel extends ChangeNotifier>
   /// See the method used to bootstrap the app (e.g. [runApp] or [runWidget])
   /// for suggestions on how to release resources more eagerly.
   @protected
-  void dispose(BuildContext context) {}
+  void dispose(BuildContext context, TViewModel viewModel) {}
 
   /// Builds a waiting or loading state widget for the view.
+  ///
+  /// IMPORTANT: When the ViewModel is [IInitializable], the async
+  /// initalization() method is being run while this widget is being
+  /// displayed, to the ViewModel is **NOT** yet initialized at this moment!
+  /// This widget is built ONLY when the ViewModel is [IInitializable], so
+  /// the ViewModel here is NEVER initialized.
   ///
   /// This method is responsible for rendering the UI when the view is in a
   /// loading or waiting state. It provides a consistent and customizable
@@ -259,11 +270,19 @@ final class _ViewWidgetState<TViewModel extends ChangeNotifier>
     _viewModel = widget.viewModelFactory(Dependencies.currentScope);
 
     if (_viewModel case final IInitializable initializable) {
-      _initializer = initializable.initialize();
+      _initializer = () async {
+        await initializable.initialize();
+
+        if (context.mounted) {
+          // ignore: use_build_context_synchronously
+          widget.initState(context, _viewModel);
+        }
+      } as Future<void>;
+    } else {
+      widget.initState(context, _viewModel);
     }
 
     super.initState();
-    widget.initializeEarlyState(context);
 
     SchedulerBinding.instance.addPostFrameCallback(
       (delta) {
@@ -272,7 +291,7 @@ final class _ViewWidgetState<TViewModel extends ChangeNotifier>
           "Post initializing (delta: ${delta.inMilliseconds})",
         );
 
-        widget.initializeAfterFirstFrame(context);
+        widget.initializeAfterFirstFrame(context, _viewModel);
       },
     );
   }
@@ -281,14 +300,14 @@ final class _ViewWidgetState<TViewModel extends ChangeNotifier>
   void didChangeDependencies() {
     _logger.log(Level.FINE, "Dependencies changed");
     super.didChangeDependencies();
-    widget.didChangeDependencies(context);
+    widget.didChangeDependencies(context, _viewModel);
   }
 
   @override
   void dispose() {
     _logger.log(Level.FINE, "Disposing");
     super.dispose();
-    widget.dispose(context);
+    widget.dispose(context, _viewModel);
   }
 
   @override

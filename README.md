@@ -81,7 +81,7 @@ final class AuthViewModel extends ChangeNotifier {
 }
 
 // A widget that creates and manages the ViewModel. It contains
-// some nice methods, such as initializeEarlyState or dispose.
+// some nice methods, such as initState or dispose.
 final class AuthenticationView extends ViewWidget<AuthViewModel> {
   const AuthenticationView({super.key});
 
