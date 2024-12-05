@@ -263,6 +263,17 @@ final class _ViewWidgetState<TViewModel extends ChangeNotifier>
   late final TViewModel _viewModel;
   Future<void>? _initializer;
 
+  Future<void> _initialize(
+    BuildContext context,
+    IInitializable initializable,
+  ) async {
+    await initializable.initialize();
+
+    if (context.mounted) {
+      widget.initState(context, _viewModel);
+    }
+  }
+
   @override
   void initState() {
     _logger.log(Level.FINE, "Initializing");
@@ -270,14 +281,7 @@ final class _ViewWidgetState<TViewModel extends ChangeNotifier>
     _viewModel = widget.viewModelFactory(Dependencies.currentScope);
 
     if (_viewModel case final IInitializable initializable) {
-      _initializer = () async {
-        await initializable.initialize();
-
-        if (context.mounted) {
-          // ignore: use_build_context_synchronously
-          widget.initState(context, _viewModel);
-        }
-      } as Future<void>;
+      _initializer = _initialize(context, initializable);
     } else {
       widget.initState(context, _viewModel);
     }

@@ -66,3 +66,8 @@
 # 1.1.0+1
 
 * Minor fixes
+
+# 1.1.0+2
+
+* Minor fixes
+* Docs update
