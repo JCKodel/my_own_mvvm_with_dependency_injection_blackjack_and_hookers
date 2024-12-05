@@ -5,7 +5,7 @@ abstract base class ViewWidget<TViewModel extends ChangeNotifier>
   const ViewWidget({super.key});
 
   @protected
-  TViewModel buildViewModel(Dependencies scope, Logger logger);
+  TViewModel buildViewModel(Dependencies scope);
 
   @protected
   void initState(BuildContext context, TViewModel viewModel) {}
@@ -51,7 +51,7 @@ final class _ViewWidgetState<TViewModel extends ChangeNotifier>
   void initState() {
     _logger.log(Level.FINE, "Initializing");
 
-    _viewModel = widget.buildViewModel(Dependencies.currentScope, _logger);
+    _viewModel = widget.buildViewModel(Dependencies.currentScope);
 
     if (_viewModel case final IInitializable initializable) {
       _initializer = initializable.initialize();

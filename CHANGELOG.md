@@ -54,3 +54,7 @@
 ## 1.0.2+1
 
 * Fix ViewWidget  initialization
+
+## 1.0.2+2
+
+* Removed logger dependency
