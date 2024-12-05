@@ -13,6 +13,5 @@ part 'src/dependency.dart';
 part 'src/i_disposable.dart';
 part 'src/i_initializable.dart';
 part 'src/scope.dart';
-part 'src/view_model.dart';
 part 'src/view_model_stateless_widget.dart';
 part 'src/view_widget.dart';

@@ -2,316 +2,155 @@
 
 ![image](https://kagi.com/proxy/3p1j1.jpg?c=kPRFzVRYJ3F-DHkv6vwSyo6yJrOaaUPxu7I4t2jBzblNnBvB47WswF8oshEqx9xq0EvIDpvq587ecyBv1JFODA%3D%3D)
 
-1) Divide your classes into business logic and infrastructure (for instance: FirebaseAuth is infrastructure).
+# Dependency Injection Framework for Flutter: Clean Architecture Made Simple
 
-DETAILS: What makes sense for me: a) *models*  are classes with business logic ONLY that don't hold state at all (they have const constructors to enforce this). Any side effect is allowed to happen only in external dependencies, which are known to the model only by contracts (an interface (`abstract interface class` in Dart). I like to call those contract implementations "providers", since they provide the details of something (like database access or authentication). ViewModels then uses models to do a job specific suited for the view that uses it, using the models (also injected). View Models are mutable, because they hold state. That makes things simpler =)
+## Why Separation of Concerns Matters
 
-2) Whenever appropriate in the widget tree, use the [DependenciesBuilder] widget to initialize the infrastructure and provide it to the widget tree:
+Separation of Concerns (SoC) is a fundamental design principle that transforms complex software development into a manageable, scalable process. By breaking down your application into distinct, focused modules, you achieve:
 
-(NOTE: `DependenciesBuilder` will add a scope in the widget tree, but you don't need to do that, since a scope (`Dependencies` class) is pure Dart (i.e.: it doesn't need Flutter to work)). `DependenciesBuilder` just makes things easier.
+- **Modularity**: Each component has a single, well-defined responsibility
+- **Maintainability**: Changes in one module minimally impact others
+- **Testability**: Individual components can be tested in isolation
+- **Scalability**: New features can be added with minimal friction
 
-```dart
-DependenciesBuilder(
-  dependencies: [
-    Dependency<IAuthProvider>(
-      (scope) => FirebaseAuthProvider(),
-    ),
-    Dependency<PowersyncDatabase>(
-      (scope) => PowersyncDatabase(
-        scope<IAuthProvider>(),
-        scope<IHttpClientProvider>(),
-      ),
-      dependsOn: [IAuthProvider, IHttpClientProvider],
-    ),
-    Dependency<IHttpClientProvider>(
-      (scope) => NativeHttpClientProvider(),
-    ),
-    Dependency<IAuthDatabaseProvider>(
-      (scope) => PowersyncAuthDatabaseProvider(scope<PowersyncDatabase>()),
-      dependsOn: [PowersyncDatabase],
-    ),
-    Dependency<AuthModel>(
-      (scope) => AuthModel(
-        scope<IAuthDatabaseProvider>(),
-        scope<IAuthProvider>(),
-        scope<IDeviceInfoProvider>(),
-        scope<IBlurHashProvider>(),
-      ),
-      dependsOn: [
-        IAuthDatabaseProvider,
-        IAuthProvider,
-        IDeviceInfoProvider,
-        IBlurHashProvider,
-      ],
-    ),
-    Dependency<IDeviceInfoProvider>(
-      (scope) => DeviceInfoProvider(),
-    ),
-    Dependency<IBlurHashProvider>(
-      (scope) => FFIBlurHashProvider(),
-    ),
-  ],
-  builder: (context, scope) => const MainApp(),
-);
-```
+## ViewModel: The Business Logic Coordinator
 
-Notice that each dependency can depend on other dependencies. There is no need to worry about registration order, as the [DependenciesBuilder] will automatically resolve the dependencies in the correct order.
+The ViewModel acts as a **pure business logic coordinator** that:
+- Transforms data for UI presentation
+- Manages UI state
+- Delegates I/O operations to specialized providers
+- Communicates only through interfaces
 
-Dependencies that implement [IInitializable] will be initialized automatically when the [DependenciesBuilder] is built (which happens when the widget tree is built).
+**Key Principles:**
+- All dependencies are singletons within its own scope
+- You can have multiple scopes that will be disposed when the widget tree is disposed, along with all dependencies that belongs to the current scope (that's why your dependencies can implement `IDisposable`)
+- Never performs direct I/O operations
+- Depends on abstractions, not concrete implementations
+- Maintains a clean separation between business logic and data sources
 
-When a [DependencyBuilder] gets out of scope, it will be disposed automatically, 
-along with any dependencies that implement [IDisposable]. [ChangeNotifier.dispose] will also be called on dispose.
+## Dependency Injection: Decoupling Your Application
 
-3) Use the [ViewModelStatelessWidget] class to create a stateless widget that requires a view model *or*, inherit the `ViewWidget<TViewModel extends ChangeNotifier>` class in your views (this class has some neat overrides for you to use, like `initState`, `didChangeDependencies`, `dispose`, `buildWaiter`, `buildError` and `build`).
+**Dependencies** are external services your application requires:
+- Authentication services
+- Database connections
+- File system access
+- Network APIs
+- Platform-specific plugins
 
-TIP: You here have two choices: if you want to make your view model free of this framework, then you inject what you need in the constructor, just like the example provided. But, some people, like me, don't like that, because adding or removing dependencies have now two places to change (the constructor and the `factory` method). In that case, you can then pass the `scope` to your class and then use it to create what you need inside the class. Only one place to change it, but now your class has a dependency of this framework (the `Dependencies` class, which is the scope of dependencies that allows you to resolve them). As anything in reality, it is always a tradeoff.
+Our dependency injection framework allows you to:
+- Inject dependencies at runtime
+- Swap implementations easily
+- Create modular, testable code
 
-ALSO: `ViewModelStatelessWidget<MainAppViewModel>` is only a helper. You don't heed to use it if you don't want. All it does is wrap your view model inside a `DependenciesBuilder` widget (so your view model is a dependency in the same way any other dependency is) and then it uses an internal stateful builder to hold that view model in the tree, initializing and disposing of it as needed. You can, if you want, construct, initialize and dispose your view model yourself and, since it is a `ChangeNotifier`, you don't need any of my code to actually use it (a simple `ValueListenableBuilder` will do the trick)
+## Simple Authentication Example
 
 ```dart
-final class MainApp extends ViewModelStatelessWidget<MainAppViewModel> {
-  const MainApp({super.key});
-
-  @override
-  MainAppViewModel Function(Dependencies scope) get factory =>
-      (scope) => MainAppViewModel(scope<AuthModel>());
-
-  @override
-  Widget buildView(BuildContext context, MainAppViewModel viewModel) {
-    return MaterialApp(
-      home: viewModel.isAuthenticated ? const HomeView() : const LoginView(),
-    );
-  }
+// Providers are like operating system drivers: they implement
+// something, like API access, authentication (through, for 
+// instance, FirebaseAuth), storage, etc.
+//
+// Any ViewModel or dependency that implements `IInitializable`
+// will be initialized when the dependencies are built.
+//
+// The ViewModel only have a contract, the interface to communicate
+// with those providers:
+abstract interface class IAuthenticationProvider
+  implements IInitializable {
+  Future<bool> authenticate(String username, String password);
 }
-```
 
-In this class, you will have access to the [MainAppViewModel] instance, that was
-created using the dependencies registered in the [DependenciesBuilder].
+// The view model is the business logic that uses your providers
+// It is made for one view
+//
+// If you have common logic that you want to share between view
+// models, such as `signOut`, you can create a class that is
+// responsible to hold the business logic and binding the
+// providers with the view model.
+final class AuthViewModel extends ChangeNotifier {
+  AuthViewModel(this._authProvider);
 
-The ViewModel is just a simple [ChangeNotifier] class that uses models (business logic):
-
-```dart
-final class MainAppViewModel extends ChangeNotifier
-    implements IInitializable, IDisposable {
-  MainAppViewModel(AuthModel authModel) : _authModel = authModel;
-
-  final AuthModel _authModel;
+  final AuthenticationProvider _authProvider;
 
   bool _isAuthenticated = false;
   bool get isAuthenticated => _isAuthenticated;
 
-  StreamSubscription<bool>? _isAuthenticatedStreamSubscription;
-
-  @override
-  Future<void> initialize() async {
-    _isAuthenticatedStreamSubscription =
-        _authModel.isAuthenticatedStream.listen(_onAuthChanged);
-
-    _isAuthenticated = _authModel.isAuthenticated;
-    logDebug("IsAuthenticated = ${isAuthenticated}");
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-    _isAuthenticatedStreamSubscription?.cancel();
-  }
-
-  void _onAuthChanged(bool isAuthenticated) {
-    if (_isAuthenticated == isAuthenticated) {
-      return;
-    }
-
-    logDebug("AuthChanging to ${isAuthenticated}");
-    _isAuthenticated = isAuthenticated;
+  Future<void> login(String username, String password) async {
+    _isAuthenticated = await _authProvider.authenticate(username, password);
     notifyListeners();
   }
+}
 
-  void signOut() {
-    logDebug("Signing out");
-    _authModel.signOut();
+// A widget that creates and manages the ViewModel. It contains
+// some nice methods, such as initializeEarlyState or dispose.
+final class AuthenticationView extends ViewWidget<AuthViewModel> {
+  const AuthenticationView({super.key});
+
+  @override
+  AuthViewModel viewModelFactory(Dependencies scope) {
+    return AuthViewModel(scope.get<IAuthenticationProvider>());
+  }
+
+  @override
+  Widget build(BuildContext context, AuthViewModel viewModel) {
+    return Text(
+      viewModel.isAuthenticated 
+        ? "Is Authenticated" 
+        : "Is Not Authenticated"
+    );
   }
 }
 
+// Your root widget should be a Dependencies widget:
+
+runApp(
+  // Builds the dependency injection scope from here on,
+  // initializing all `IInitializable` dependencies.
+  //
+  // The order of dependencies is NOT important, since the
+  // package will automatically sort them by dependency
+  DependenciesBuilder(
+    dependencies: [
+      // Whenever someone needs an IAuthenticationProvider,
+      // a FirebaseAuthenticationProvider will be provided.
+      Dependency<IAuthenticationProvider>(
+        (scope) => FirebaseAuthenticationProvider(),
+      ),
+      Dependency<ISomeOtherProvider>(
+        (scope) => SomeOtherProvider(
+          authenticationProvider:
+            // This is how you get a dependency from the scope.
+            scope.get<IAuthenticationProvider>(),
+        ),
+        // This is important when one dependency depends on
+        // another to ensure the correct order of instantiation
+        // and initialization of the dependencies.
+        dependsOn: [IAuthenticationProvider],
+      ),
+    ],
+    builder: (context, scope) => const MainApp(),
+  );
+);
 ```
 
-4) Business logic is just a simple class that uses the infrastructure required
-by its contracts (so it is testable and you can easily change a dependency if 
-you need so (for instance, change FirebaseAuth to Auth-0)): 
 
-```dart
-final class AuthModel {
-  AuthModel(
-    IAuthDatabaseProvider authRepository,
-    IAuthProvider authProviderModel,
-    IDeviceInfoProvider deviceInfoModel,
-    IBlurHashProvider blurHashModel,
-  )   : _authRepository = authRepository,
-        _authProviderModel = authProviderModel,
-        _deviceInfoModel = deviceInfoModel,
-        _blurHashModel = blurHashModel;
+## Why Choose Our Dependency Injection Framework?
 
-  final IAuthDatabaseProvider _authRepository;
-  final IAuthProvider _authProviderModel;
-  final IDeviceInfoProvider _deviceInfoModel;
-  final IBlurHashProvider _blurHashModel;
+- **Clean Architecture**: Enforces separation of concerns
+- **Flexible**: Easy dependency management
+- **Testable**: Mock dependencies effortlessly
+- **Runtime Configuration**: Change dependencies dynamically
+- **Minimal Boilerplate**: Simple, intuitive API
 
-  bool get isAuthenticated => _authProviderModel.isAuthenticated;
+**Read the source code to discover the full power of this package!**
 
-  Stream<bool> get isAuthenticatedStream =>
-      _authProviderModel.isAuthenticatedStream;
+> Separation of Concerns (SoC) - GeeksforGeeks https://www.geeksforgeeks.org/separation-of-concerns-soc/
 
-  Future<void> initialize() async {
-    if (isAuthenticated == false) {
-      return;
-    }
+> how do you handle Business Logic? : r/FlutterDev - Reddit https://www.reddit.com/r/FlutterDev/comments/drwruf/people_who_use_provider_for_state_management_how/
 
-    final token = await _authProviderModel.getUserToken();
+> A quick intro to Dependency Injection: what it is, and when to use it https://www.freecodecamp.org/news/a-quick-intro-to-dependency-injection-what-it-is-and-when-to-use-it-7578c84fa88f/
 
-    switch (token) {
-      case None<UserToken>():
-        signOut();
-      case Some<UserToken>():
-        await _getPrincipalFromRepository(token.value.userId);
-    }
-  }
+> Separation of concerns - Wikipedia https://en.wikipedia.org/wiki/Separation_of_concerns
 
-  Future<SignInResult> signInWithApple() async {
-    return _signIn(_authProviderModel.signInWithApple);
-  }
+> Guide to app architecture - Flutter Documentation https://docs.flutter.dev/app-architecture/guide
 
-  Future<SignInResult> signInWithGoogle() async {
-    return _signIn(_authProviderModel.signInWithGoogle);
-  }
-
-  Future<SignInResult> _signIn(
-    Future<SignInResult> Function() signInHandler,
-  ) async {
-    final signInResult = await signInHandler();
-
-    logInfo("Sign in result: ${signInResult}");
-
-    if (signInResult is! SuccessSignInResult) {
-      return signInResult;
-    }
-
-    return _getPrincipalFromRepository(signInResult.userId);
-  }
-
-  Future<SignInResult> _getPrincipalFromRepository(String userId) async {
-    final result =
-        await _authRepository.initializePreviouslyAuthenticatedPrincipal(
-      userId,
-    );
-
-    return switch (result) {
-      OpenRepositoryFailureQueryResult<Principal>() =>
-        ExceptionSignInResult(result.failure, StackTrace.current),
-      ExceptionQueryResult<Principal>() => ExceptionSignInResult(
-          result.exception,
-          result.stackTrace,
-        ),
-      EmptyQueryResult<Principal>() => _getPrincipalFromAuthProvider(),
-      SuccessQueryResult<Principal>() => _sanitizePrincipal(result.data),
-    };
-  }
-
-  Future<SignInResult> _getPrincipalFromAuthProvider() async {
-    final result = await _authProviderModel.createPrincipalFromCurrentUser();
-
-    return switch (result) {
-      Some<Principal>() => _sanitizePrincipal(result.value),
-      None<Principal>() => ExceptionSignInResult(
-          StateError("User is unauthenticated in auth provider"),
-          StackTrace.current,
-        ),
-    };
-  }
-
-  Future<SignInResult> _sanitizePrincipal(Principal principal) async {
-    logInfo("Sanitizing principal");
-
-    if (principal.email.isEmpty) {
-      logError(
-        "No e-mail provided",
-        ArgumentError.notNull("email"),
-        StackTrace.current,
-      );
-
-      return const EmptyEmailSignInResult();
-    }
-
-    if (principal.name.isEmpty) {
-      principal = principal.copyWith(
-        name: principal.email.split("@").first.split("+").first,
-      );
-    }
-
-    return _generateAvatarBlurHash(principal);
-  }
-
-  Future<SignInResult> _generateAvatarBlurHash(Principal principal) async {
-    if (principal.avatarUrl.isEmpty) {
-      return _getDeviceInfo(principal.copyWith(avatarBlurHash: ""));
-    }
-
-    final result = await _blurHashModel.generateRemoteImageHash(
-      principal.avatarUrl,
-    );
-
-    switch (result) {
-      case Some():
-        return _getDeviceInfo(
-          principal.copyWith(avatarBlurHash: result.value),
-        );
-      case None():
-        return _getDeviceInfo(principal);
-    }
-  }
-
-  Future<SignInResult> _getDeviceInfo(Principal principal) async {
-    final result = await _deviceInfoModel.getDeviceInfo();
-
-    return switch (result) {
-      Some() => _persistSignInData(principal, result.value),
-      None() => ExceptionSignInResult(
-          ArgumentError.notNull("deviceInfo"),
-          StackTrace.current,
-        ),
-    };
-  }
-
-  Future<SignInResult> _persistSignInData(
-    Principal principal,
-    DeviceInfo deviceInfo,
-  ) async {
-    final repositoryResult = await _authRepository.persistSignInData(
-      principal,
-      deviceInfo,
-    );
-
-    if (repositoryResult is! SuccessMutationResult) {
-      return ExceptionSignInResult(repositoryResult, StackTrace.current);
-    }
-
-    final providerResult = await _authProviderModel.persistSignInData(
-      principal,
-    );
-
-    if (providerResult is! SuccessMutationResult) {
-      return ExceptionSignInResult(providerResult, StackTrace.current);
-    }
-
-    return SuccessSignInResult(principal.id);
-  }
-
-  Future<Option<UserToken>> getUserToken() => _authProviderModel.getUserToken();
-
-  void signOut() {
-    _authProviderModel.signOut();
-    _authRepository.close();
-  }
-}
-```
-
-5) Done. Other then [DependenciesBuilder] and [ViewModelStatelessWidget], there is no framework dependency here, you can ditch us whenever you want. No need to learn a new framework. You are versed in  BLoC but your frenemy is versed in Riverpod? You both can be fired together by someone who keeps the things simpler.
+> Dependency injection - Wikipedia https://en.wikipedia.org/wiki/Dependency_injection

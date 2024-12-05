@@ -58,3 +58,7 @@
 ## 1.0.2+2
 
 * Removed logger dependency
+
+## 1.1.0
+
+* Changed some names and adding some documentation
