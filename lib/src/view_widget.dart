@@ -1,9 +1,4 @@
-import 'package:flutter/scheduler.dart';
-import 'package:flutter/widgets.dart';
-
-import 'package:logging/logging.dart';
-
-import '../dependencies.dart';
+part of '../dependencies.dart';
 
 abstract base class ViewWidget<TViewModel extends ChangeNotifier>
     extends StatefulWidget {

@@ -27,7 +27,6 @@
 * Production ready
 * Added `logging` for logging (you should configure logging in your app)
 * Added some hooks for widgets initialization
-* Simplified `ViewWidget`
 * Fix a bug when registering the same dependency twice would trigger the circular dependency error (now it will throw an exception)
 * Improved initialization (parallel initialization, when it is possible)
 * Added some tests
@@ -47,3 +46,7 @@
 ## 1.0.1+2
 
 * Fix a bug in the parallel initialization, again
+
+## 1.0.2
+
+* Simplified `ViewWidget`
